@@ -11,7 +11,7 @@
 #include <netinet/in.h>
 #include <unistd.h>
 
-#define IP "142.250.183.46"     /* IP of saividya.ac.in */
+#define IP "142.250.183.46"     /*     IP of Google.com */
 #define PORT 80                 /*      HTTPS PORT      */
 
 int main()
