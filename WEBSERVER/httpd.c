@@ -10,13 +10,46 @@
 
 #define LISTENADDR "127.0.0.1"
 
+/* structures */
+struct sHttpRequest
+{
+        char method[10];
+        char url[128];
+};
+typedef struct sHttpRequest httpreq;
+
 /* global */
 char *error;
 
 /* dummy for testing purposes only - needs implementation */
-void cli_conn()
+void cli_conn(int s, int c)
 {
         return;
+}
+
+/* return 0 on error, or returns a httpreq structure */
+httpreq *parse_http(char *str)
+{
+        httpreq *req;
+        char *p;
+
+        req = malloc(sizeof(httpreq));
+
+        for (p = str; p && *p != ' '; p++);
+
+        if (*p == ' ')
+                *p = 0;
+        else
+        {
+                error = "parse_http() NOSPACE error\n";
+                free(req);
+
+                return 0;
+        }
+
+        strncpy(req->method, str, 7);
+        return req;
+
 }
 
 /* returns 0 on error, or returns the new client's socket fd */
@@ -78,6 +111,37 @@ int main(int argc, char *argv[])
         int s;
         char *port;
         int c;
+        char buff[512];
+        char *template;
+        httpreq *req;
+
+        template =
+                "GET / HTTP/1.1\n"
+                "Host: localhost:8081GET / HTTP/1.1\n"
+                "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:136.0) Gecko/20100101 Firefox/136.0\n"
+                "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\n"
+                "Accept-Language: en-US,en;q=0.5\n"
+                "Accept-Encoding: gzip, deflate, br, zstd\n"
+                "Connection: keep-alive\n"
+                "Upgrade-Insecure-Requests: 1\n"
+                "Sec-Fetch-Dest: document\n"
+                "Sec-Fetch-Mode: navigate\n"
+                "Sec-Fetch-Site: none\n"
+                "Sec-Fetch-User: ?1\n"
+                "Priority: u=0, i\n"
+                "\n"
+                "\n";
+
+        memset(buff, 0, 512);
+        strncpy(buff, template, 511);
+
+        parse_http(buff);
+        if (!req)
+                fprintf(stderr, "%s\n", error);
+        else
+                printf("Method: '%s'\nURL: '%s'\n", req->method, req->url);
+
+        return 0;
 
         if (argc < 2)
         {
@@ -107,9 +171,8 @@ int main(int argc, char *argv[])
 
                 printf("[+] Incoming connection\n");
                 if (!fork())
-                        cli_conn(s, c);
+                                cli_conn(s, c);
         }
 
         return -1;
 }
-
