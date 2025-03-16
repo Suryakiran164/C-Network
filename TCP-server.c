@@ -16,7 +16,7 @@
 
 int main()
 {
-        int s, c;
+        int s, c, n;
         socklen_t addrlen;
         struct sockaddr_in srv, cli;
         char buf[512];
@@ -67,12 +67,13 @@ int main()
 
         printf("\n[+] Client connected on port 8081!\n\n");
 
-        read(c, buf, 511);
+        n = read(c, buf, 511);
 
         write(c, data, strlen(data));
 
         data = "\n[+] Closing Connection...\n";
         write(c, data, strlen(data));
+        write(1, buf, n);
         close(c);
 
         printf("\n[+] Closing Server...\n");
