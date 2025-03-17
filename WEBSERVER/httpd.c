@@ -48,6 +48,22 @@ httpreq *parse_http(char *str)
         }
 
         strncpy(req->method, str, 7);
+
+        for (str = p++ ; p && *p != ' '; p++);
+
+        if (*p == ' ')
+                *p = 0;
+        else
+        {
+                error = "parse_http() 2nd NOSPACE error\n";
+                free(req);
+
+                return 0;
+        }
+
+
+
+        strncpy(req->url, str, 127);
         return req;
 
 }
@@ -116,8 +132,8 @@ int main(int argc, char *argv[])
         httpreq *req;
 
         template =
-                "GET / HTTP/1.1\n"
-                "Host: localhost:8081GET / HTTP/1.1\n"
+                "GET /path_to_file HTTP/1.1\n"
+                "Host: localhost:8081\n"
                 "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:136.0) Gecko/20100101 Firefox/136.0\n"
                 "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\n"
                 "Accept-Language: en-US,en;q=0.5\n"
@@ -130,17 +146,18 @@ int main(int argc, char *argv[])
                 "Sec-Fetch-User: ?1\n"
                 "Priority: u=0, i\n"
                 "\n"
-                "\n";
+                "\n", 0x00;
 
         memset(buff, 0, 512);
         strncpy(buff, template, 511);
 
-        parse_http(buff);
+        req = parse_http(buff);
         if (!req)
                 fprintf(stderr, "%s\n", error);
         else
                 printf("Method: '%s'\nURL: '%s'\n", req->method, req->url);
 
+        free(req);
         return 0;
 
         if (argc < 2)
