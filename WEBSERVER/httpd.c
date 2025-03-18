@@ -21,9 +21,60 @@ typedef struct sHttpRequest httpreq;
 /* global */
 char *error;
 
+
+/* function prototype */
+httpreq *parse_http(char *str);
+int srv_init(int portno);
+int cli_accept(int s);
+void cli_conn(int s, int c);
+char *cli_read(int c);
+int main(int argc, char *argv[]);
+
+
+
+/* return 0 on error, or return the data */
+char *cli_read(int c)
+{
+        static char buf[512];
+
+        memset(buf, 0, 512);
+        if (read(c, buf, 511) < 0)
+        {
+                error = "read() error!";
+                return 0;
+        }
+        else
+                return buf;
+}
+
 /* dummy for testing purposes only - needs implementation */
 void cli_conn(int s, int c)
 {
+        httpreq *req;
+        char *p;
+
+        p = cli_read(c);
+        if (!p)
+        {
+                fprintf(stderr, "%s\n", error);
+                close(c);
+
+                return;
+        }
+
+        req = parse_http(p);
+        if (!req)
+        {
+                fprintf(stderr, "%s\n", error);
+                close(c);
+
+                return;
+        }
+
+        printf("'%s'\n'%s'\n", req->method, req->url);
+        free(req);
+        close(c);
+
         return;
 }
 
@@ -35,7 +86,7 @@ httpreq *parse_http(char *str)
 
         req = malloc(sizeof(httpreq));
 
-        for (p = str; p && *p != ' '; p++);
+        for (p = str; *p && *p != ' '; p++);
 
         if (*p == ' ')
                 *p = 0;
@@ -49,7 +100,7 @@ httpreq *parse_http(char *str)
 
         strncpy(req->method, str, 7);
 
-        for (str = p++ ; p && *p != ' '; p++);
+        for (str = ++p ; *p && *p != ' '; p++);
 
         if (*p == ' ')
                 *p = 0;
@@ -124,41 +175,8 @@ int srv_init(int portno)
 
 int main(int argc, char *argv[])
 {
-        int s;
+        int s, c;
         char *port;
-        int c;
-        char buff[512];
-        char *template;
-        httpreq *req;
-
-        template =
-                "GET /path_to_file HTTP/1.1\n"
-                "Host: localhost:8081\n"
-                "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:136.0) Gecko/20100101 Firefox/136.0\n"
-                "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\n"
-                "Accept-Language: en-US,en;q=0.5\n"
-                "Accept-Encoding: gzip, deflate, br, zstd\n"
-                "Connection: keep-alive\n"
-                "Upgrade-Insecure-Requests: 1\n"
-                "Sec-Fetch-Dest: document\n"
-                "Sec-Fetch-Mode: navigate\n"
-                "Sec-Fetch-Site: none\n"
-                "Sec-Fetch-User: ?1\n"
-                "Priority: u=0, i\n"
-                "\n"
-                "\n", 0x00;
-
-        memset(buff, 0, 512);
-        strncpy(buff, template, 511);
-
-        req = parse_http(buff);
-        if (!req)
-                fprintf(stderr, "%s\n", error);
-        else
-                printf("Method: '%s'\nURL: '%s'\n", req->method, req->url);
-
-        free(req);
-        return 0;
 
         if (argc < 2)
         {
