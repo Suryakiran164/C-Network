@@ -1,4 +1,7 @@
-/* httpd.c */
+/* ************************************ *
+ * Basic TCP Webserver implementation   *
+ * 18/03/2025 - by @Suryakiran164       *
+ * ************************************ */
 #include <stdio.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -29,7 +32,48 @@ int cli_accept(int s);
 void cli_conn(int s, int c);
 char *cli_read(int c);
 int main(int argc, char *argv[]);
+void http_header(int c, int code);
+void http_response(int c, char *content_type, char *data);
 
+/* returns 0 on error, or writes http headers to client fd */
+void http_header(int c, int code)
+{
+        char buf[512];
+        int n;
+
+        memset(buf, 0, 512);
+        snprintf(buf, 511,
+                "HTTP/1.0 %d OK\n"
+                "Server: httpd.c\n"
+                "Cache-Control: no-cache, no-store\n"
+                "Content-Language: en\n"
+                "Expires: -1\n"
+                "X-Frame-Options: SAMEORIGIN\n",
+                code);
+        n = strlen(buf);
+        write(c, buf, n);
+
+        return;
+}
+
+/* returns 0 on error, or writes http response to client fd */
+void http_response(int c, char *content_type, char *data)
+{
+        char buf[512];
+        int n;
+
+        n = strlen(data);
+        snprintf(buf, 511,
+                "Content-Type: %s\n"
+                "Content-Length: %d\n"
+                "\n%s\n",
+                content_type, n, data);
+
+        n = strlen(buf);
+        write(c, buf, n);
+
+        return;
+}
 
 
 /* return 0 on error, or return the data */
@@ -52,6 +96,7 @@ void cli_conn(int s, int c)
 {
         httpreq *req;
         char *p;
+        char *res;
 
         p = cli_read(c);
         if (!p)
@@ -71,7 +116,19 @@ void cli_conn(int s, int c)
                 return;
         }
 
-        printf("'%s'\n'%s'\n", req->method, req->url);
+        if ((!strcmp(req->method, "GET") && !strcmp(req->url, "/index.html")))
+        {
+                res = "<html><h1>you recived a response!\n</h1><br><br>HI! from server!</html>";
+                http_header(c, 200);
+                http_response(c,"text/html", res);      // 200 = Everything okay
+        }
+        else
+        {
+                res = "Sorry! File not found :(\n";
+                http_header(c, 404);    // 404 = File not found
+                http_response(c, "text/plain", res);
+        }
+
         free(req);
         close(c);
 
@@ -173,6 +230,7 @@ int srv_init(int portno)
         return s;
 }
 
+/* accepts port nnumber command line args & prints error if occured */
 int main(int argc, char *argv[])
 {
         int s, c;
